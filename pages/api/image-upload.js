@@ -1,4 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
+// pages/api/image-upload.js
+import { supabase } from '@/lib/supabase';
 import { nanoid } from 'nanoid';
 import { decode } from 'base64-arraybuffer';
 

@@ -4,15 +4,53 @@ import Image from 'next/image';
 import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
 import { PrismaClient } from '@prisma/client';
+import { useSession } from 'next-auth/react';
+import { useState, useEffect } from 'react';
+import axios from 'axios';
+import toast from 'react-hot-toast';
 
 const prisma = new PrismaClient();
 
 const ListedHome = (home = null) => {
+  const { data: session } = useSession();
+  const [isOwner, setIsOwner] = useState(false);
   const router = useRouter();
 
   if (router.isFallback) {
     return 'Loading...';
   }
+
+  useEffect(() => {
+    (async () => {
+      if (session?.user) {
+        try {
+          const owner = await axios.get(`/api/homes/${home.id}/owner`);
+          setIsOwner(owner?.id === session.user.id);
+        } catch (e) {
+          setIsOwner(false);
+        }
+      }
+    })();
+  }, [session?.user]);
+
+  const [deleting, setDeleting] = useState(false);
+
+  const deleteHome = async () => {
+    let toastId;
+    try {
+      toastId = toast.loading('Deleting...');
+      setDeleting(true);
+      // Delete home from DB
+      await axios.delete(`/api/homes/${home.id}`);
+      // Redirect user
+      toast.success('Successfully deleted', { id: toastId });
+      router.push('/homes');
+    } catch (e) {
+      console.log(e);
+      toast.error('Unable to delete home', { id: toastId });
+      setDeleting(false);
+    }
+  };
 
   return (
     <Layout>
@@ -36,6 +74,28 @@ const ListedHome = (home = null) => {
               </li>
             </ol>
           </div>
+
+          {isOwner ? (
+            <div className="...">
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={() => router.push(`/homes/${home.id}/edit`)}
+                className="...."
+              >
+                Edit
+              </button>
+
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={deleteHome}
+                className="..."
+              >
+                {deleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          ) : null}
         </div>
 
         <div className="mt-6 relative aspect-w-16 aspect-h-9 bg-gray-200 rounded-lg shadow-md overflow-hidden">
